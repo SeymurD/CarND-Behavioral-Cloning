@@ -1,6 +1,8 @@
 import csv
 import numpy as np
 import cv2
+import matplotlib.pyplot as plt
+from scipy import stats
 
 from sklearn.utils import shuffle
 
@@ -76,6 +78,47 @@ def generator(paths, angles, batchsize=128):
                 paths, angles = shuffle(paths, angles)
 
 
-# Data preprocessing
-def data_preprocess():
-    
+# Data pre-processing
+def data_preprocess(paths, angles):
+    # Evaluate average frequency
+    hist_bins = 41  # 0.1 spacing from -1,1 plus 0
+    avg_freq = len(angles) / hist_bins
+    noise = 400     # account for data noise, tune param
+    # Visualize histogram
+    hist, bins = steer_hist(angles, avg_freq)
+
+    # indices to reduce over-representation of steering angles,
+    # reduce multimodal histogram to be approximately uniform
+    remove = []
+    for j in range(len(hist)):
+        if hist[j] > (avg_freq + noise):
+            for i in range(len(angles)):
+                if (angles[i] > (bins[j])) and (angles[i] <= (bins[j+2])):
+                    # Drop the values based on 60% chance, value can be tuned later
+                    p = np.random.choice(2, 1, p=[0.4, 0.6])
+                    if p == 1:
+                        remove.append(i)
+
+    angles = np.delete(angles, remove, axis=0)
+    paths = np.delete(paths, remove, axis=0)
+    print("Number of over-represented data points:", len(remove))
+    print("Total data samples remaining:", len(angles))
+    steer_hist(angles, avg_freq)
+
+    return paths, angles
+
+# Visualize steering histogram
+def steer_hist(angles, avg_freq=0):
+    # Visualize distribution of steering angles
+    hist, bins = np.histogram(angles, bins=np.linspace(-1, 1, 41))
+    mid = (bins[:-1] + bins[1:]) / 2
+    width = 0.8 * (bins[1] - bins[0])
+    plt.bar(mid, hist, align='edge', width=width)
+    plt.xticks(np.linspace(-1, 1, 21), ha='center', rotation=45)
+    plt.hlines(avg_freq, -1, 1)
+    plt.show()
+
+    # Print Kolmogorov-Smirnov test metrics
+    print(stats.kstest(angles, 'norm'))
+
+    return hist, bins
