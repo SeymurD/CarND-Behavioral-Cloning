@@ -74,3 +74,8 @@ def generator(paths, angles, batchsize=128):
                 # Clear batch variables and shuffle
                 X, y = ([], [])
                 paths, angles = shuffle(paths, angles)
+
+
+# Data preprocessing
+def data_preprocess():
+    
