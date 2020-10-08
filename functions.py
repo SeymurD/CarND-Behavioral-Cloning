@@ -2,6 +2,9 @@ import csv
 import numpy as np
 import cv2
 
+from sklearn.utils import shuffle
+
+
 # Function to read in the CSV data
 def read_data(path):
     with open(path, newline='') as f:
@@ -20,7 +23,7 @@ def read_data(path):
         # Adjust steering angles as seen from left/right camera as they should not have
         # vectors that remain parallel to the center camera, but rather converge towards
         # the vector generated from the center camera
-        steering_center = row[3]
+        steering_center = float(row[3])
         correction = 0.2
         steering_left = steering_center + correction
         steering_right = steering_center - correction
@@ -50,3 +53,24 @@ def visualize_data(path, batchsize=10):
         cv2.waitKey(0)
 
 
+# Generate batched data to be passed into fit_generator. Training, validation and test data can
+# all be generated from the following function
+def generator(paths, angles, batchsize=128):
+    X = []  # inputs
+    y = []  # target
+    paths, angles = shuffle(paths, angles)
+
+    while True:
+        for i in range(len(angles)):
+            image = cv2.imread(paths[i])
+            angle = angles[i]
+
+            # Store in batch variables
+            X.append(image)
+            y.append(angle)
+
+            if len(X) == batchsize:
+                yield np.array(X), np.array(y)
+                # Clear batch variables and shuffle
+                X, y = ([], [])
+                paths, angles = shuffle(paths, angles)

@@ -3,11 +3,11 @@ from keras.layers.core import Dense, Activation, Flatten, Dropout, Lambda
 from keras.layers.convolutional import Conv2D
 from keras.layers.pooling import MaxPool2D
 from keras.layers.advanced_activations import ReLU
+from keras.regularizers import l2
 
 
-def net():
+def net(model):
     # ------------------------ Convolutional Neural Network Architecture ------------------------
-    model = Sequential()
     kernel_size = (5, 5)
     # Normalize
     model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))

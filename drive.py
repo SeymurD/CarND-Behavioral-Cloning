@@ -63,9 +63,10 @@ def telemetry(sid, data):
         image_array = np.asarray(image)
         steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
 
-        throttle = controller.update(float(speed))
-
-        print(steering_angle, throttle)
+        # Will not use provided PID controller, instead induce constant speed and monitor steering angle
+        throttle = 0.2
+        if float(speed) < 10:
+            throttle = 1
         send_control(steering_angle, throttle)
 
         # save frame
