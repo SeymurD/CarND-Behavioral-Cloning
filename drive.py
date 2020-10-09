@@ -16,6 +16,8 @@ from keras.models import load_model
 import h5py
 from keras import __version__ as keras_version
 
+from functions import image_preprocess
+
 sio = socketio.Server()
 app = Flask(__name__)
 model = None
@@ -61,6 +63,7 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
+        image_array = image_preprocess(image_array)
         steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
 
         # Will not use provided PID controller, instead induce constant speed and monitor steering angle

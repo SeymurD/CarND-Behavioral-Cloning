@@ -21,7 +21,7 @@ img_paths, angles = read_data(csv_path)
 img_paths, angles = shuffle(img_paths, angles)
 
 # Visualize some images
-#visualize_data(img_paths, 5)
+visualize_data(img_paths, 5)
 
 # Process some of the images
 img_paths, angles = data_preprocess(img_paths, angles)
@@ -44,7 +44,7 @@ if isTrain:
     # Compile and train the model
     model.compile(optimizer=Adam(lr=1e-4), loss='mse')
 
-    batchsize = 64
+    batchsize = 128
     # Generators for train, validate and test sets
     train_gen = generator(img_path_train, angles_train, batchsize=batchsize)
     valid_gen = generator(img_path_train, angles_train, batchsize=batchsize)
@@ -57,11 +57,11 @@ if isTrain:
     history = model.fit_generator(train_gen, validation_data=valid_gen,
                                   validation_steps=len(img_path_test) // batchsize,
                                   steps_per_epoch=len(img_path_train) // batchsize,
-                                  epochs=50, verbose=1, callbacks=[checkpoint])
+                                  epochs=100, verbose=1, callbacks=[checkpoint])
 
     # Print results
     print('Test Loss:', model.evaluate_generator(test_gen, 128))
     print(model.summary())
 
     # Save weights
-    model.save_weights('./model/model.h5')
+    model.save_weights('model.h5')

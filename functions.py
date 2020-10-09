@@ -51,6 +51,7 @@ def read_data(path):
 def visualize_data(path, batchsize=10):
     for i in range(batchsize):
         img = cv2.imread(path[i])
+        img = image_preprocess(img)
         cv2.imshow("Sample", img)
         cv2.waitKey(0)
 
@@ -66,7 +67,7 @@ def generator(paths, angles, batchsize=128):
         for i in range(len(angles)):
             image = cv2.imread(paths[i])
             angle = angles[i]
-
+            image = image_preprocess(image)
             # Store in batch variables
             X.append(image)
             y.append(angle)
@@ -122,3 +123,11 @@ def steer_hist(angles, avg_freq=0):
     print(stats.kstest(angles, 'norm'))
 
     return hist, bins
+
+# Image pre-processing and augmentation for robustness of CNN
+def image_preprocess(img):
+    # Crop the image
+    img = img[54:120, :, :]     # 66 pixel vertically is the smallest accepted into Nvidia network
+    # Add Gaussian blur
+    img = cv2.GaussianBlur(img, (3, 3), 0)
+    return img

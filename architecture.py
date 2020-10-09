@@ -10,7 +10,7 @@ def net(model):
     # ------------------------ Convolutional Neural Network Architecture ------------------------
     kernel_size = (5, 5)
     # Normalize
-    model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
+    model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(66, 320, 3)))
 
     # Add three 5x5 convolution layers (output depth 24, 36, and 48), each with 2x2 stride
     model.add(Conv2D(24, kernel_size, strides=(2, 2), padding='valid', kernel_regularizer=l2(0.001)))
