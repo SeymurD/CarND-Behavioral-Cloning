@@ -12,7 +12,7 @@ from functions import *
 from architecture import net
 
 # Generate file path to training data from CSV file
-csv_path = './training_data/driving_log.csv'
+csv_path = ['./training_data/driving_log.csv', './training_data_reverse/driving_log.csv']
 
 # Read image data, image resolution is 160x320 (h, w)
 img_paths, angles = read_data(csv_path)
@@ -46,9 +46,9 @@ if isTrain:
 
     batchsize = 128
     # Generators for train, validate and test sets
-    train_gen = generator(img_path_train, angles_train, batchsize=batchsize)
-    valid_gen = generator(img_path_train, angles_train, batchsize=batchsize)
-    test_gen = generator(img_path_test, angles_test, batchsize=batchsize)
+    train_gen = generator(img_path_train, angles_train, train=True, batchsize=batchsize)
+    valid_gen = generator(img_path_train, angles_train, train=False, batchsize=batchsize)
+    test_gen = generator(img_path_test, angles_test, train=False, batchsize=batchsize)
 
     # Set checkpoint
     checkpoint = ModelCheckpoint(filepath='./model/model.{epoch:02d}-{val_loss:.2f}.h5')
@@ -64,4 +64,4 @@ if isTrain:
     print(model.summary())
 
     # Save weights
-    model.save_weights('model.h5')
+    model.save_weights('./model/model.h5')
