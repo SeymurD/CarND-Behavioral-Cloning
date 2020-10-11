@@ -27,7 +27,7 @@ def read_data(paths):
             # vectors that remain parallel to the center camera, but rather converge towards
             # the vector generated from the center camera
             steering_center = float(row[3])
-            correction = 0.1
+            correction = 0.25
             steering_left = steering_center + correction
             steering_right = steering_center - correction
 
@@ -71,12 +71,13 @@ def generator(paths, angles, train=False, batchsize=128):
             image = image_preprocess(image)
             # Training modifiers
             if train:
-                image = transform_image(image, 40, 0, 0, brightness=1)
+                image, angle = random_distort(image, angle)
+                #image = transform_image(image, 0, 0, 0, brightness=1)
                 # Flip image with probability of 50%
-                p = np.random.choice(2, 1, p=[0.5, 0.5])
-                if p == 1:
-                    image = np.fliplr(image)
-                    angle = -angle
+                # p = np.random.choice(2, 1, p=[0.5, 0.5])
+                # if p == 1:
+                #     image = np.fliplr(image)
+                #     angle = -angle
             # Store in batch variables
             X.append(image)
             y.append(angle)
@@ -87,11 +88,22 @@ def generator(paths, angles, train=False, batchsize=128):
                 X, y = ([], [])
                 paths, angles = shuffle(paths, angles)
 
+            # flip horizontally and invert steer angle, if magnitude is > 0.33
+            if abs(angle) > 0.33:
+                img = cv2.flip(image, 1)
+                angle *= -1
+                X.append(image)
+                y.append(angle)
+                if len(X) == batchsize:
+                    yield np.array(X), np.array(y)
+                    X, y = ([], [])
+                    paths, angles = shuffle(paths, angles)
+
 
 # Data pre-processing
 def data_preprocess(paths, angles):
     # Evaluate average frequency
-    hist_bins = 41  # 0.1 spacing from -1,1 plus 0
+    hist_bins = 23  # 0.1 spacing from -1,1 plus 0
     avg_freq = len(angles) / hist_bins
     noise = 350    # account for data noise, tune param
     # Visualize histogram
@@ -100,7 +112,7 @@ def data_preprocess(paths, angles):
     # indices to reduce over-representation of steering angles,
     # reduce multimodal histogram to be approximately uniform
     keep_probs = []
-    target = avg_freq * 0.8     # visually inspect the shape and distribution of the steering angles
+    target = avg_freq * 0.9   # visually inspect the shape and distribution of the steering angles
     for i in range(len(hist)):
         if hist[i] < target:
             keep_probs.append(1.)
@@ -125,7 +137,7 @@ def data_preprocess(paths, angles):
 # Visualize steering histogram
 def steer_hist(angles, avg_freq=0):
     # Visualize distribution of steering angles
-    hist, bins = np.histogram(angles, bins=np.linspace(-1, 1, 41))
+    hist, bins = np.histogram(angles, bins=np.linspace(-1, 1, 23))
     mid = (bins[:-1] + bins[1:]) / 2
     width = 0.8 * (bins[1] - bins[0])
     plt.bar(mid, hist, align='edge', width=width)
@@ -169,7 +181,8 @@ def transform_image(img, ang_range, shear_range, trans_range, brightness=0):
     Rot_M = cv2.getRotationMatrix2D((cols/2,rows/2),ang_rot,1)
 
     # Translation
-    tr_x = trans_range*np.random.uniform()-trans_range/2
+    #tr_x = trans_range*np.random.uniform()-trans_range/2
+    tr_x = 0
     tr_y = trans_range*np.random.uniform()-trans_range/2
     Trans_M = np.float32([[1,0,tr_x],[0,1,tr_y]])
 
@@ -199,3 +212,34 @@ def augment_brightness_camera_images(image):
     image1 = cv2.cvtColor(image1,cv2.COLOR_HSV2RGB)
     return image1
 
+
+def random_distort(img, angle):
+    '''
+    method for adding random distortion to dataset images, including random brightness adjust, and a random
+    vertical shift of the horizon position
+    '''
+    new_img = img.astype(float)
+    # random brightness - the mask bit keeps values from going beyond (0,255)
+    value = np.random.randint(-28, 28)
+    if value > 0:
+        mask = (new_img[:, :, 0] + value) > 255
+    if value <= 0:
+        mask = (new_img[:, :, 0] + value) < 0
+    new_img[:, :, 0] += np.where(mask, 0, value)
+    # random shadow - full height, random left/right side, random darkening
+    h, w = new_img.shape[0:2]
+    mid = np.random.randint(0, w)
+    factor = np.random.uniform(0.6, 0.8)
+    if np.random.rand() > .5:
+        new_img[:, 0:mid, 0] *= factor
+    else:
+        new_img[:, mid:w, 0] *= factor
+    # randomly shift horizon
+    h, w, _ = new_img.shape
+    horizon = 2 * h / 5
+    v_shift = np.random.randint(-h / 8, h / 8)
+    pts1 = np.float32([[0, horizon], [w, horizon], [0, h], [w, h]])
+    pts2 = np.float32([[0, horizon + v_shift], [w, horizon + v_shift], [0, h], [w, h]])
+    M = cv2.getPerspectiveTransform(pts1, pts2)
+    new_img = cv2.warpPerspective(new_img, M, (w, h), borderMode=cv2.BORDER_REPLICATE)
+    return (new_img.astype(np.uint8), angle)
