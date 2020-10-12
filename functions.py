@@ -27,7 +27,7 @@ def read_data(paths):
             # vectors that remain parallel to the center camera, but rather converge towards
             # the vector generated from the center camera
             steering_center = float(row[3])
-            correction = 0.25
+            correction = 0.315
             steering_left = steering_center + correction
             steering_right = steering_center - correction
 
@@ -72,7 +72,7 @@ def generator(paths, angles, train=False, batchsize=128):
             # Training modifiers
             if train:
                 image, angle = random_distort(image, angle)
-                #image = transform_image(image, 0, 0, 0, brightness=1)
+                # image = transform_image(image, 40, 0, 10, brightness=0)
                 # Flip image with probability of 50%
                 # p = np.random.choice(2, 1, p=[0.5, 0.5])
                 # if p == 1:
@@ -90,7 +90,7 @@ def generator(paths, angles, train=False, batchsize=128):
 
             # flip horizontally and invert steer angle, if magnitude is > 0.33
             if abs(angle) > 0.33:
-                img = cv2.flip(image, 1)
+                image = cv2.flip(image, 1)
                 angle *= -1
                 X.append(image)
                 y.append(angle)
@@ -102,9 +102,10 @@ def generator(paths, angles, train=False, batchsize=128):
 
 # Data pre-processing
 def data_preprocess(paths, angles):
+    paths, angles = shuffle(paths, angles)
     # Evaluate average frequency
-    hist_bins = 23  # 0.1 spacing from -1,1 plus 0
-    avg_freq = len(angles) / hist_bins
+    hist_bins = 81  # 0.1 spacing from -1,1 plus 0
+    avg_freq = len(angles) / (hist_bins/2)
     noise = 350    # account for data noise, tune param
     # Visualize histogram
     hist, bins = steer_hist(angles, avg_freq)
@@ -112,7 +113,7 @@ def data_preprocess(paths, angles):
     # indices to reduce over-representation of steering angles,
     # reduce multimodal histogram to be approximately uniform
     keep_probs = []
-    target = avg_freq * 0.9   # visually inspect the shape and distribution of the steering angles
+    target = avg_freq * 0.5 # visually inspect the shape and distribution of the steering angles
     for i in range(len(hist)):
         if hist[i] < target:
             keep_probs.append(1.)
@@ -120,11 +121,15 @@ def data_preprocess(paths, angles):
             keep_probs.append(1. / (hist[i] / target))
     remove = []
     for i in range(len(angles)):
+        if angles[i] > 0.4 or angles[i] < -0.4:
+            remove.append(i)
+            continue
         for j in range(hist_bins):
             if angles[i] > bins[j] and angles[i] <= bins[j + 1]:
                 # delete from X and y with probability 1 - keep_probs[j]
                 if np.random.rand() > keep_probs[j]:
                     remove.append(i)
+
 
     angles = np.delete(angles, remove, axis=0)
     paths = np.delete(paths, remove, axis=0)
@@ -137,7 +142,7 @@ def data_preprocess(paths, angles):
 # Visualize steering histogram
 def steer_hist(angles, avg_freq=0):
     # Visualize distribution of steering angles
-    hist, bins = np.histogram(angles, bins=np.linspace(-1, 1, 23))
+    hist, bins = np.histogram(angles, bins=np.linspace(-1, 1, 81))
     mid = (bins[:-1] + bins[1:]) / 2
     width = 0.8 * (bins[1] - bins[0])
     plt.bar(mid, hist, align='edge', width=width)

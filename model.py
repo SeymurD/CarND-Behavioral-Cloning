@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from keras.models import Sequential
 from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint
+from keras.models import load_model, save_model
 
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
@@ -12,7 +13,9 @@ from functions import *
 from architecture import net
 
 # Generate file path to training data from CSV file
-csv_path = ['./training_data/driving_log.csv', './training_data_reverse/driving_log.csv']
+csv_path = ['./training_data/driving_log.csv',
+            './training_data_new/driving_log.csv']
+            #'./training_data_reverse/driving_log.csv']
 
 # Read image data, image resolution is 160x320 (h, w)
 img_paths, angles = read_data(csv_path)
@@ -25,6 +28,7 @@ img_paths, angles = shuffle(img_paths, angles)
 
 # Process some of the images
 img_paths, angles = data_preprocess(img_paths, angles)
+#steer_hist(angles, 100)
 
 # Toggle boolean to control if training is desired or just monitoring initial data
 isTrain = True
@@ -36,9 +40,12 @@ if isTrain:
     print('Test:', img_path_test.shape, angles_test.shape)
 
     # --- Model Initialization ---
-    model = Sequential()
-
-    net(model)  # adds layers, see architecture.py
+    load = True
+    if load:
+        model = load_model("my_model")
+    else:
+        model = Sequential()
+        net(model)  # adds layers, see architecture.py
     # ------ Model End Init ------
 
     # Compile and train the model
@@ -57,11 +64,11 @@ if isTrain:
     history = model.fit_generator(train_gen, validation_data=valid_gen,
                                   validation_steps=len(img_path_test) // batchsize,
                                   steps_per_epoch=len(img_path_train) // batchsize,
-                                  epochs=100, verbose=2, callbacks=[checkpoint])
+                                  epochs=30, verbose=2, callbacks=[checkpoint])
 
     # Print results
     print('Test Loss:', model.evaluate_generator(test_gen, 128))
     print(model.summary())
 
     # Save weights
-    model.save_weights('./model/model.h5')
+    model.save('my_model')
