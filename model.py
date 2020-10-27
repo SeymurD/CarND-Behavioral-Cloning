@@ -31,7 +31,7 @@ img_paths, angles = data_preprocess(img_paths, angles)
 #steer_hist(angles, 100)
 
 # Toggle boolean to control if training is desired or just monitoring initial data
-isTrain = True
+isTrain = False
 if isTrain:
     # Train-Test split
     img_path_train, img_path_test, angles_train, angles_test = \
